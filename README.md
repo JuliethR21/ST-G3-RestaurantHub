@@ -60,6 +60,7 @@ RestaurantHub/
 │   └── styles.css
 │
 ├── database/
+│   └── QueryDBRestaurant.sql
 │   └── ScriptDBRestaurante.sql
 │
 ├── index.html
@@ -68,30 +69,38 @@ RestaurantHub/
 ## Base de datos
 
 La base de datos utilizada por el proyecto se denomina:
-RestaurantHubDB
+`RestaurantHubDB`
+Los archivos relacionados con la base de datos se encuentran en la carpeta:
+database/
 
-El script de creación se encuentra en:
-database/ScriptDBRestaurante.sql
+### QueryDBRestaurant.sql
 
-Este script contiene:
+Este archivo contiene el script utilizado para la creación y configuración de la base de datos durante el desarrollo.
 
-* Creación de la base de datos.
+Incluye:
+* Creación de la base de datos `RestaurantHubDB`.
 * Creación de las tablas del sistema.
-* Claves primarias.
-* Claves foráneas.
-* Relaciones entre las tablas.
-* Restricciones básicas de integridad.
-* Datos iniciales de prueba.
+* Definición de claves primarias y foráneas.
+* Restricciones de integridad.
+* Inserción de datos de prueba.
 * Consultas de prueba para verificar la información almacenada.
+
+### ScriptDBRestaurante.sql
+
+Este archivo corresponde al script generado desde SQL Server Management Studio (SSMS) a partir de la base de datos creada.
+Contiene la estructura de las tablas, claves primarias, claves foráneas, restricciones, índices y demás elementos de configuración generados por SQL Server.
+Este archivo se conserva como una representación del esquema actual de la base de datos generado directamente desde SQL Server.
 
 ### Ejecución de la base de datos
 
-Para crear la base de datos, abrir el archivo:
-database/ScriptDBRestaurante.sql
+Para crear y poblar la base de datos, abrir el archivo:
+
+database/QueryDBRestaurant.sql
 
 en SQL Server Management Studio (SSMS) y ejecutar el script.
+El script crea la base de datos RestaurantHubDB, sus tablas, relaciones, restricciones y datos iniciales de prueba.
 
-El script crea la base de datos `RestaurantHubDB`, sus tablas, relaciones, restricciones y datos iniciales.
+El archivo ScriptDBRestaurante.sql corresponde al script generado desde SQL Server Management Studio (SSMS) y se conserva como representación del esquema actual de la base de datos.
 
 ## Backend
 
