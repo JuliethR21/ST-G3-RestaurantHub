@@ -1,0 +1,197 @@
+/* Estilos propios de RestaurantHub sobre Bootstrap 5.
+   Bootstrap da la estructura y lo responsive; aquí solo se ajustan colores y detalles. */
+
+/* VARIABLES (paleta del prototipo original) */
+:root {
+    --rh-fondo: #f6f7f9;
+    --rh-sidebar: #17191c;
+    --rh-sidebar-hover: #24272b;
+    --rh-texto-menu: #a6aab1;
+    --rh-acento: #c88a4a;
+    --rh-acento-oscuro: #a96f35;
+    --rh-acento-claro: #f7eee5;
+
+    --bs-body-bg: var(--rh-fondo);
+    --bs-body-color: #1b1d21;
+    --bs-link-color-rgb: 169, 111, 53;
+    --bs-link-hover-color-rgb: 140, 90, 40;
+}
+
+/* Evita que se vea el código de Vue ({{ }}) antes de que la página cargue */
+[v-cloak] {
+    display: none;
+}
+
+/* BOTONES Y FORMULARIOS con el color de acento */
+.btn-primary {
+    --bs-btn-bg: var(--rh-acento);
+    --bs-btn-border-color: var(--rh-acento);
+    --bs-btn-hover-bg: var(--rh-acento-oscuro);
+    --bs-btn-hover-border-color: var(--rh-acento-oscuro);
+    --bs-btn-active-bg: var(--rh-acento-oscuro);
+    --bs-btn-active-border-color: var(--rh-acento-oscuro);
+    --bs-btn-disabled-bg: var(--rh-acento);
+    --bs-btn-disabled-border-color: var(--rh-acento);
+}
+
+.btn-outline-primary {
+    --bs-btn-color: var(--rh-acento-oscuro);
+    --bs-btn-border-color: var(--rh-acento);
+    --bs-btn-hover-bg: var(--rh-acento);
+    --bs-btn-hover-border-color: var(--rh-acento);
+    --bs-btn-active-bg: var(--rh-acento-oscuro);
+    --bs-btn-active-border-color: var(--rh-acento-oscuro);
+}
+
+.form-control:focus,
+.form-select:focus,
+.form-check-input:focus {
+    border-color: var(--rh-acento);
+    box-shadow: 0 0 0 0.2rem rgba(200, 138, 74, 0.25);
+}
+
+.form-check-input:checked {
+    background-color: var(--rh-acento);
+    border-color: var(--rh-acento);
+}
+
+/* MENÚ LATERAL: fijo en pantallas grandes, desplegable (offcanvas) en celulares y tablets */
+.sidebar {
+    --bs-offcanvas-bg: var(--rh-sidebar);
+    --bs-offcanvas-width: 260px;
+    color: #fff;
+}
+
+@media (min-width: 992px) {
+    .sidebar.offcanvas-lg {
+        background-color: var(--rh-sidebar) !important;
+        width: 250px;
+        height: 100vh;
+        position: sticky;
+        top: 0;
+        flex-shrink: 0;
+        padding-top: 0.5rem;
+    }
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-weight: 700;
+    font-size: 1.1rem;
+}
+
+.logo-icono {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: var(--rh-acento);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.menu-titulo {
+    color: var(--rh-texto-menu);
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin: 1rem 0 0.5rem 0.75rem;
+}
+
+.menu-enlace {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.65rem 0.75rem;
+    border-radius: 10px;
+    color: var(--rh-texto-menu);
+    text-decoration: none;
+}
+
+.menu-enlace:hover {
+    background: var(--rh-sidebar-hover);
+    color: #fff;
+}
+
+.menu-enlace.activo {
+    background: var(--rh-acento);
+    color: #fff;
+}
+
+/* CONTENIDO */
+.contenido {
+    min-width: 0;
+}
+
+.card {
+    border: 0;
+    border-radius: 14px;
+    box-shadow: 0 1px 3px rgba(16, 24, 40, 0.08);
+}
+
+.card-header {
+    background: transparent;
+    border-bottom-color: #eef0f2;
+    font-weight: 600;
+}
+
+.table > thead th {
+    color: #73777f;
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+}
+
+.table > :not(caption) > * > * {
+    padding: 0.75rem;
+}
+
+/* Tarjetas de resumen del inicio */
+.icono-resumen {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    background: var(--rh-acento-claro);
+    color: var(--rh-acento-oscuro);
+    flex-shrink: 0;
+}
+
+.dato-resumen {
+    font-size: 1.75rem;
+    font-weight: 700;
+    line-height: 1.1;
+}
+
+/* Tarjetas de producto en "Nuevo pedido" */
+.producto-tarjeta {
+    transition: box-shadow 0.15s ease;
+}
+
+.producto-tarjeta:hover {
+    box-shadow: 0 4px 14px rgba(16, 24, 40, 0.12);
+}
+
+.resumen-pedido {
+    position: sticky;
+    top: 1rem;
+    scroll-margin-top: 1rem;
+}
+
+/* Deja espacio para que la barra inferior del celular no tape el final de la página */
+@media (max-width: 991.98px) {
+    main:has(.barra-pedido-movil) {
+        padding-bottom: 5rem !important;
+    }
+}
+
+.toast-container {
+    z-index: 1090;
+}

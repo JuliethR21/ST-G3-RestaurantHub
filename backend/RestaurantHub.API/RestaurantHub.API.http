@@ -1,6 +1,45 @@
 @RestaurantHub.API_HostAddress = http://localhost:5127
 
-GET {{RestaurantHub.API_HostAddress}}/weatherforecast/
-Accept: application/json
+### Catálogo de productos
+GET {{RestaurantHub.API_HostAddress}}/api/productos?disponible=true
 
-###
+### Producto con su receta
+GET {{RestaurantHub.API_HostAddress}}/api/productos/1
+
+### Inventario de ingredientes
+GET {{RestaurantHub.API_HostAddress}}/api/ingredientes
+
+### Registrar un pedido válido (descuenta ingredientes según la receta)
+POST {{RestaurantHub.API_HostAddress}}/api/pedidos
+Content-Type: application/json
+
+{
+  "idCliente": 1,
+  "idUsuario": 2,
+  "items": [
+    { "idProducto": 1, "cantidad": 2 },
+    { "idProducto": 5, "cantidad": 1 }
+  ]
+}
+
+### Pedido sin inventario suficiente (hay 8 gaseosas): se rechaza y no se guarda nada
+POST {{RestaurantHub.API_HostAddress}}/api/pedidos
+Content-Type: application/json
+
+{
+  "idCliente": 1,
+  "idUsuario": 2,
+  "items": [
+    { "idProducto": 1, "cantidad": 1 },
+    { "idProducto": 3, "cantidad": 10 }
+  ]
+}
+
+### Cambiar el estado de un pedido
+PATCH {{RestaurantHub.API_HostAddress}}/api/pedidos/2/estado
+Content-Type: application/json
+
+{ "estado": "ENTREGADO" }
+
+### Alertas de reabastecimiento pendientes
+GET {{RestaurantHub.API_HostAddress}}/api/ingredientes/alertas

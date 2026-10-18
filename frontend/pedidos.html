@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Pedidos · RestaurantHub</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div id="app" v-cloak>
+    <app-layout activa="pedidos" titulo="Pedidos" subtitulo="Historial y seguimiento de los pedidos">
+        <template v-slot:acciones>
+            <a href="nuevo-pedido.html" class="btn btn-primary">
+                <i class="bi bi-plus-lg"></i><span class="d-none d-sm-inline"> Nuevo pedido</span>
+            </a>
+        </template>
+
+        <!-- Filtros -->
+        <form class="card mb-4" @submit.prevent="cargar">
+            <div class="card-body row g-3 align-items-end">
+                <div class="col-12 col-md-4">
+                    <label class="form-label small text-secondary" for="filtro-estado">Estado</label>
+                    <select id="filtro-estado" class="form-select" v-model="filtros.estado">
+                        <option value="">Todos</option>
+                        <option v-for="(info, clave) in estados" :key="clave" :value="clave">{{ info.texto }}</option>
+                    </select>
+                </div>
+                <div class="col-6 col-md-3">
+                    <label class="form-label small text-secondary" for="filtro-desde">Desde</label>
+                    <input id="filtro-desde" type="date" class="form-control" v-model="filtros.desde">
+                </div>
+                <div class="col-6 col-md-3">
+                    <label class="form-label small text-secondary" for="filtro-hasta">Hasta</label>
+                    <input id="filtro-hasta" type="date" class="form-control" v-model="filtros.hasta">
+                </div>
+                <div class="col-12 col-md-2 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary flex-grow-1"><i class="bi bi-funnel"></i> Filtrar</button>
+                    <button type="button" class="btn btn-light border" title="Limpiar filtros" @click="limpiarFiltros"><i class="bi bi-x-lg"></i></button>
+                </div>
+            </div>
+        </form>
+
+        <estado-carga :cargando="cargando" :error="error" @reintentar="cargar"></estado-carga>
+
+        <!-- Tabla de pedidos -->
+        <div class="card" v-if="!cargando && !error">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr><th>Pedido</th><th>Cliente</th><th class="d-none d-md-table-cell">Atendió</th><th>Fecha</th><th class="text-end">Total</th><th>Estado</th><th class="d-none d-sm-table-cell">Pago</th><th></th></tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="p in pedidos" :key="p.idPedido">
+                            <td class="fw-semibold">#{{ p.idPedido }}</td>
+                            <td>{{ p.cliente }}</td>
+                            <td class="d-none d-md-table-cell">{{ p.usuario }}</td>
+                            <td class="text-secondary small text-nowrap">{{ $formato.fecha(p.fecha) }}</td>
+                            <td class="text-end text-nowrap">{{ $formato.moneda(p.total) }}</td>
+                            <td><estado-pedido :estado="p.estado"></estado-pedido></td>
+                            <td class="d-none d-sm-table-cell">
+                                <span v-if="p.pagado" class="badge text-bg-light border"><i class="bi bi-check2"></i> Pagado</span>
+                                <span v-else class="text-secondary small">Sin pago</span>
+                            </td>
+                            <td class="text-end">
+                                <button class="btn btn-sm btn-outline-primary text-nowrap" @click="abrirDetalle(p.idPedido)">
+                                    <i class="bi bi-eye"></i><span class="d-none d-lg-inline"> Ver</span>
+                                </button>
+                            </td>
+                        </tr>
+                        <tr v-if="pedidos.length === 0">
+                            <td colspan="8" class="text-center text-secondary py-5">No hay pedidos con estos filtros.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Detalle del pedido -->
+        <app-modal :abierto="detalle.abierto" :titulo="'Pedido #' + (detalle.pedido?.idPedido ?? '')" tamano="lg" @cerrar="cerrarDetalle">
+            <estado-carga :cargando="detalle.cargando" :error="detalle.error" @reintentar="abrirDetalle(detalle.id)"></estado-carga>
+
+            <template v-if="detalle.pedido && !detalle.cargando">
+                <div class="row g-3 mb-3">
+                    <div class="col-6 col-md-3"><div class="small text-secondary">Cliente</div><div class="fw-semibold">{{ detalle.pedido.cliente }}</div></div>
+                    <div class="col-6 col-md-3"><div class="small text-secondary">Atendió</div><div class="fw-semibold">{{ detalle.pedido.usuario }}</div></div>
+                    <div class="col-6 col-md-3"><div class="small text-secondary">Fecha</div><div>{{ $formato.fecha(detalle.pedido.fecha) }}</div></div>
+                    <div class="col-6 col-md-3"><div class="small text-secondary">Estado</div><estado-pedido :estado="detalle.pedido.estado"></estado-pedido></div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0">
+                        <thead><tr><th>Producto</th><th class="text-center">Cant.</th><th class="text-end">Precio</th><th class="text-end">Subtotal</th></tr></thead>
+                        <tbody>
+                            <tr v-for="d in detalle.pedido.detalles" :key="d.idProducto">
+                                <td>{{ d.producto }}</td>
+                                <td class="text-center">{{ d.cantidad }}</td>
+                                <td class="text-end text-nowrap">{{ $formato.moneda(d.precioUnitario) }}</td>
+                                <td class="text-end text-nowrap">{{ $formato.moneda(d.subtotal) }}</td>
+                            </tr>
+                        </tbody>
+                        <tfoot>
+                            <tr><th colspan="3" class="text-end">Total</th><th class="text-end fs-5 text-nowrap">{{ $formato.moneda(detalle.pedido.total) }}</th></tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                <div v-if="detalle.pedido.pagado" class="alert alert-light border small mt-3 mb-0">
+                    <i class="bi bi-info-circle"></i> Este pedido ya fue pagado, por eso no se puede cancelar.
+                </div>
+            </template>
+
+            <template v-slot:pie>
+                <button class="btn btn-light border me-auto" @click="cerrarDetalle">Cerrar</button>
+                <template v-if="detalle.pedido && !detalle.cargando">
+                    <button v-if="puedeCancelar" class="btn btn-outline-danger" :disabled="detalle.guardando" @click="cambiarEstado('CANCELADO')">
+                        <i class="bi bi-x-circle"></i> Cancelar pedido
+                    </button>
+                    <button v-if="siguienteEstado" class="btn btn-primary" :disabled="detalle.guardando" @click="cambiarEstado(siguienteEstado.estado)">
+                        <span v-if="detalle.guardando" class="spinner-border spinner-border-sm"></span>
+                        <i v-else class="bi" :class="siguienteEstado.icono"></i> {{ siguienteEstado.texto }}
+                    </button>
+                </template>
+            </template>
+        </app-modal>
+    </app-layout>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vue@3.4.38/dist/vue.global.prod.js"></script>
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/componentes.js"></script>
+<script src="js/paginas/pedidos.js"></script>
+</body>
+</html>

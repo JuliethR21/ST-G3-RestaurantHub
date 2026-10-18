@@ -1,10 +1,8 @@
-# .NET
-**/bin/
-**/obj/
-
-# Visual Studio
+bin/
+obj/
 .vs/
-
-# Archivos de usuario
+.vscode/
+.claude/
 *.user
 *.suo
+Thumbs.db

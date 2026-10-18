@@ -4,8 +4,27 @@ IF DB_ID('RestaurantHubDB') IS NULL
 BEGIN
     CREATE DATABASE RestaurantHubDB;
 END
+GO
 
 USE RestaurantHubDB;
+GO
+
+-- Eliminacion de las tablas existentes (en orden inverso a sus dependencias)
+-- para poder ejecutar el script nuevamente desde cero
+DROP TABLE IF EXISTS ALERTA_REABASTECIMIENTO;
+DROP TABLE IF EXISTS PRODUCTO_INGREDIENTE;
+DROP TABLE IF EXISTS PREDICCION_DEMANDA;
+DROP TABLE IF EXISTS FACTURA;
+DROP TABLE IF EXISTS PAGO;
+DROP TABLE IF EXISTS DETALLE_PEDIDO;
+DROP TABLE IF EXISTS PEDIDO;
+DROP TABLE IF EXISTS INVENTARIO;
+DROP TABLE IF EXISTS INGREDIENTE;
+DROP TABLE IF EXISTS PRODUCTO;
+DROP TABLE IF EXISTS CATEGORIA;
+DROP TABLE IF EXISTS CLIENTE;
+DROP TABLE IF EXISTS USUARIO;
+GO
 
 -- Creacion de la tabla "USUARIO"
 CREATE TABLE USUARIO (
@@ -40,7 +59,7 @@ CREATE TABLE PRODUCTO (
     nombre VARCHAR(100) NOT NULL,
     descripcion VARCHAR(200),
     precio DECIMAL(10,2) NOT NULL,
-    estado VARCHAR(20) NOT NULL,
+    disponible BIT NOT NULL DEFAULT 1,
 
     CONSTRAINT FK_PRODUCTO_CATEGORIA
         FOREIGN KEY (id_categoria)
@@ -50,22 +69,40 @@ CREATE TABLE PRODUCTO (
         CHECK (precio >= 0)
 );
 
--- Creacion de la tabla "INVENTARIO"
-CREATE TABLE INVENTARIO (
-	id_inventario INT IDENTITY(1,1) PRIMARY KEY,
-	id_producto INT NOT NULL UNIQUE,
-	stock_actual INT NOT NULL,
-	stock_minimo INT NOT NULL,
-	fecha_actualizacion DATETIME NOT NULL,
+-- Creacion de la tabla "INGREDIENTE"
+CREATE TABLE INGREDIENTE (
+    id_ingrediente INT IDENTITY(1,1) PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    unidad_medida VARCHAR(30) NOT NULL,
+    stock_actual DECIMAL(10,2) NOT NULL,
+    stock_minimo DECIMAL(10,2) NOT NULL,
 
-	CONSTRAINT FK_INVENTARIO_PRODUCTO
-		FOREIGN KEY (id_producto)
-		REFERENCES PRODUCTO(id_producto),
+    CONSTRAINT CK_INGREDIENTE_STOCK_ACTUAL
+        CHECK (stock_actual >= 0),
 
-	CONSTRAINT CK_INVENTARIO_STOCK_ACTUAL
-		CHECK (stock_actual >= 0),
+    CONSTRAINT CK_INGREDIENTE_STOCK_MINIMO
+        CHECK (stock_minimo >= 0)
+);
 
-	CONSTRAINT CK_INVENTARIO_STOCK_MINIMO CHECK (stock_minimo >= 0)
+-- Creacion de la tabla "PRODUCTO_INGREDIENTE" (receta de cada producto)
+CREATE TABLE PRODUCTO_INGREDIENTE (
+    id_producto INT NOT NULL,
+    id_ingrediente INT NOT NULL,
+    cantidad DECIMAL(10,2) NOT NULL,
+
+    CONSTRAINT PK_PRODUCTO_INGREDIENTE
+        PRIMARY KEY (id_producto, id_ingrediente),
+
+    CONSTRAINT FK_RECETA_PRODUCTO
+        FOREIGN KEY (id_producto)
+        REFERENCES PRODUCTO(id_producto),
+
+    CONSTRAINT FK_RECETA_INGREDIENTE
+        FOREIGN KEY (id_ingrediente)
+        REFERENCES INGREDIENTE(id_ingrediente),
+
+    CONSTRAINT CK_RECETA_CANTIDAD
+        CHECK (cantidad > 0)
 );
 
 -- Creacion de la tabla "PEDIDO"
@@ -73,7 +110,7 @@ CREATE TABLE PEDIDO (
     id_pedido INT IDENTITY(1,1) PRIMARY KEY,
     id_cliente INT NOT NULL,
     id_usuario INT NOT NULL,
-    fecha DATETIME NOT NULL,
+    fecha DATETIME NOT NULL DEFAULT GETDATE(),
     estado VARCHAR(30) NOT NULL,
     total DECIMAL(10,2) NOT NULL,
 
@@ -120,7 +157,7 @@ CREATE TABLE DETALLE_PEDIDO (
 CREATE TABLE PAGO (
     id_pago INT IDENTITY(1,1) PRIMARY KEY,
     id_pedido INT NOT NULL UNIQUE,
-    fecha_pago DATETIME NOT NULL,
+    fecha_pago DATETIME NOT NULL DEFAULT GETDATE(),
     monto DECIMAL(10,2) NOT NULL,
     metodo_pago VARCHAR(30) NOT NULL,
     estado VARCHAR(20) NOT NULL,
@@ -132,6 +169,49 @@ CREATE TABLE PAGO (
     CONSTRAINT CK_PAGO_MONTO
         CHECK (monto >= 0)
 );
+
+-- Creacion de la tabla "FACTURA"
+CREATE TABLE FACTURA (
+    id_factura INT IDENTITY(1,1) PRIMARY KEY,
+    id_pedido INT NOT NULL UNIQUE,
+    fecha DATETIME NOT NULL DEFAULT GETDATE(),
+    total DECIMAL(10,2) NOT NULL,
+
+    CONSTRAINT FK_FACTURA_PEDIDO
+        FOREIGN KEY (id_pedido)
+        REFERENCES PEDIDO(id_pedido),
+
+    CONSTRAINT CK_FACTURA_TOTAL
+        CHECK (total >= 0)
+);
+
+-- Creacion de la tabla "PREDICCION_DEMANDA"
+CREATE TABLE PREDICCION_DEMANDA (
+    id_prediccion INT IDENTITY(1,1) PRIMARY KEY,
+    id_producto INT NOT NULL,
+    fecha DATETIME NOT NULL,
+    cantidad_estimada INT NOT NULL,
+
+    CONSTRAINT FK_PREDICCION_PRODUCTO
+        FOREIGN KEY (id_producto)
+        REFERENCES PRODUCTO(id_producto),
+
+    CONSTRAINT CK_PREDICCION_CANTIDAD
+        CHECK (cantidad_estimada >= 0)
+);
+
+-- Creacion de la tabla "ALERTA_REABASTECIMIENTO"
+CREATE TABLE ALERTA_REABASTECIMIENTO (
+    id_alerta INT IDENTITY(1,1) PRIMARY KEY,
+    id_ingrediente INT NOT NULL,
+    fecha DATETIME NOT NULL DEFAULT GETDATE(),
+    estado VARCHAR(20) NOT NULL,
+
+    CONSTRAINT FK_ALERTA_INGREDIENTE
+        FOREIGN KEY (id_ingrediente)
+        REFERENCES INGREDIENTE(id_ingrediente)
+);
+GO
 
 -- Registro de datos de prueba
 INSERT INTO USUARIO
@@ -155,22 +235,36 @@ VALUES
     ('Acompañamientos', 'Productos para acompañar los platos principales');
 
 INSERT INTO PRODUCTO
-    (id_categoria, nombre, descripcion, precio, estado)
+    (id_categoria, nombre, descripcion, precio, disponible)
 VALUES
-    (1, 'Hamburguesa Clasica', 'Hamburguesa con carne, queso, tomate y lechuga', 18000.00, 'DISPONIBLE'),
-    (1, 'Hamburguesa Especial', 'Hamburguesa con doble carne y queso', 25000.00, 'DISPONIBLE'),
-    (2, 'Gaseosa', 'Bebida gaseosa personal', 5000.00, 'DISPONIBLE'),
-    (2, 'Limonada', 'Limonada natural', 7000.00, 'DISPONIBLE'),
-    (3, 'Papas Fritas', 'Porcion de papas fritas', 8000.00, 'DISPONIBLE');
+    (1, 'Hamburguesa Clasica', 'Hamburguesa con carne, queso, tomate y lechuga', 18000.00, 1),
+    (1, 'Hamburguesa Especial', 'Hamburguesa con doble carne y queso', 25000.00, 1),
+    (2, 'Gaseosa', 'Bebida gaseosa personal', 5000.00, 1),
+    (2, 'Limonada', 'Limonada natural', 7000.00, 1),
+    (3, 'Papas Fritas', 'Porcion de papas fritas', 8000.00, 1);
 
-INSERT INTO INVENTARIO
-	(id_producto, stock_actual, stock_minimo, fecha_actualizacion)
+INSERT INTO INGREDIENTE
+    (nombre, unidad_medida, stock_actual, stock_minimo)
 VALUES
-	(1, 20, 5, GETDATE()),
-	(2, 15, 5, GETDATE()),
-	(3, 50, 10, GETDATE()),
-	(4, 30, 8, GETDATE()),
-	(5, 25, 5, GETDATE());
+    ('Pan de hamburguesa', 'UNIDAD', 40, 10),
+    ('Carne de res', 'GRAMO', 6000, 1500),
+    ('Queso', 'TAJADA', 60, 15),
+    ('Tomate', 'GRAMO', 3000, 500),
+    ('Lechuga', 'GRAMO', 2000, 300),
+    ('Papa', 'GRAMO', 10000, 2000),
+    ('Limon', 'UNIDAD', 30, 10),
+    ('Azucar', 'GRAMO', 2000, 500),
+    ('Gaseosa personal', 'UNIDAD', 8, 10);
+
+-- Receta de cada producto: cantidad de ingrediente para preparar una unidad
+INSERT INTO PRODUCTO_INGREDIENTE
+    (id_producto, id_ingrediente, cantidad)
+VALUES
+    (1, 1, 1), (1, 2, 150), (1, 3, 1), (1, 4, 30), (1, 5, 20),
+    (2, 1, 1), (2, 2, 300), (2, 3, 2), (2, 4, 30), (2, 5, 20),
+    (3, 9, 1),
+    (4, 7, 2), (4, 8, 30),
+    (5, 6, 250);
 
 INSERT INTO PEDIDO
     (id_cliente, id_usuario, fecha, estado, total)
@@ -199,6 +293,27 @@ VALUES
     (1, GETDATE(), 31000.00, 'EFECTIVO', 'PAGADO'),
     (3, GETDATE(), 33000.00, 'TARJETA', 'PAGADO');
 
+INSERT INTO FACTURA
+    (id_pedido, fecha, total)
+VALUES
+    (1, GETDATE(), 31000.00),
+    (3, GETDATE(), 33000.00);
+
+INSERT INTO PREDICCION_DEMANDA
+    (id_producto, fecha, cantidad_estimada)
+VALUES
+    (1, DATEADD(DAY, 1, CAST(GETDATE() AS DATE)), 25),
+    (2, DATEADD(DAY, 1, CAST(GETDATE() AS DATE)), 12),
+    (3, DATEADD(DAY, 1, CAST(GETDATE() AS DATE)), 30),
+    (4, DATEADD(DAY, 1, CAST(GETDATE() AS DATE)), 15),
+    (5, DATEADD(DAY, 1, CAST(GETDATE() AS DATE)), 28);
+
+INSERT INTO ALERTA_REABASTECIMIENTO
+    (id_ingrediente, fecha, estado)
+VALUES
+    (9, GETDATE(), 'PENDIENTE');
+GO
+
 --- Consulta de prueba
 
 SELECT
@@ -225,28 +340,71 @@ INNER JOIN PRODUCTO PR
     ON DP.id_producto = PR.id_producto
 ORDER BY DP.id_pedido;
 
-SELECT 
+SELECT
 	PR.id_producto,
 	PR.nombre AS producto,
 	C.nombre AS categoria,
 	PR.precio,
-	PR.estado,
-	I.stock_actual,
-	I.stock_minimo,
-	I.fecha_actualizacion
+	PR.disponible
 FROM PRODUCTO PR
 INNER JOIN CATEGORIA C
 	ON PR.id_categoria = C.id_categoria
-INNER JOIN INVENTARIO I
-	ON PR.id_producto = I.id_producto
 ORDER BY PR.nombre;
 
+-- Receta de cada producto
 SELECT
-	PR.id_producto,
 	PR.nombre AS producto,
+	I.nombre AS ingrediente,
+	PI.cantidad,
+	I.unidad_medida
+FROM PRODUCTO_INGREDIENTE PI
+INNER JOIN PRODUCTO PR
+	ON PI.id_producto = PR.id_producto
+INNER JOIN INGREDIENTE I
+	ON PI.id_ingrediente = I.id_ingrediente
+ORDER BY PR.nombre, I.nombre;
+
+-- Ingredientes con existencias en o por debajo del minimo
+SELECT
+	I.id_ingrediente,
+	I.nombre AS ingrediente,
 	I.stock_actual,
-	I.stock_minimo
-FROM PRODUCTO PR
-INNER JOIN INVENTARIO I
-	ON PR.id_producto = I.id_producto
+	I.stock_minimo,
+	I.unidad_medida
+FROM INGREDIENTE I
 WHERE I.stock_actual <= I.stock_minimo;
+
+-- Pedidos facturados con su pago
+SELECT
+	F.id_factura,
+	F.id_pedido,
+	F.fecha,
+	F.total,
+	PA.metodo_pago,
+	PA.estado AS estado_pago
+FROM FACTURA F
+INNER JOIN PAGO PA
+	ON F.id_pedido = PA.id_pedido;
+
+-- Alertas de reabastecimiento pendientes
+SELECT
+	A.id_alerta,
+	I.nombre AS ingrediente,
+	I.stock_actual,
+	I.stock_minimo,
+	A.fecha,
+	A.estado
+FROM ALERTA_REABASTECIMIENTO A
+INNER JOIN INGREDIENTE I
+	ON A.id_ingrediente = I.id_ingrediente
+WHERE A.estado = 'PENDIENTE';
+
+-- Prediccion de demanda por producto
+SELECT
+	PD.fecha,
+	PR.nombre AS producto,
+	PD.cantidad_estimada
+FROM PREDICCION_DEMANDA PD
+INNER JOIN PRODUCTO PR
+	ON PD.id_producto = PR.id_producto
+ORDER BY PD.fecha, PR.nombre;
